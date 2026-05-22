@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Saldırı Laboratuvarı — IDOR Lab{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>⚔ Saldırı Laboratuvarı</h1>
+    <p class="muted">URL'deki fatura ID'sini değiştirerek IDOR zafiyetini canlı dene.</p>
+  </div>
+  <a href="{{ url_for('admin_panel') }}" class="btn btn-ghost">Admin Paneli →</a>
+</section>
+
+<div class="lab-grid">
+  <div class="card">
+    <div class="card-head">
+      <h2>1. Hedefi Seç</h2>
+      <span class="muted">Sistemdeki tüm fatura ID'leri (keşif aşaması)</span>
+    </div>
+    <div class="id-grid">
+      {% for inv_id in all_ids %}
+        <button class="id-chip" data-id="{{ inv_id }}">#{{ inv_id }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="form-row" style="margin-top:14px">
+      <span>Manuel ID gir</span>
+      <div class="input-row">
+        <input type="number" id="invoice-id" placeholder="ör. 2001" min="1">
+        <button id="fetch-btn" class="btn btn-primary">İstek Gönder</button>
+      </div>
+    </div>
+
+    <div class="curl-hint">
+      <span class="muted">Aynı isteği terminalden de dene:</span>
+      <code id="curl-line">curl -b cookies.txt http://localhost:5000/api/invoice/2001</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>2. Sunucu Yanıtı</h2>
+      <span id="resp-badge" class="pill pill-muted">bekleniyor…</span>
+    </div>
+    <div id="attack-result" class="result-empty">
+      Sol panelden bir ID seç veya gir, "İstek Gönder"e bas.
+    </div>
+  </div>
+</div>
+
+<section class="callout callout-danger">
+  <strong>Senaryo:</strong> <code>ahmet</code> olarak giriş yapmış durumdasın
+  (ID'lerin <code>1001</code> ve <code>1002</code>). Şimdi
+  <code>2001</code> veya <code>3001</code> dene — başkalarının faturasına
+  erişebilirsen mod <em>VULNERABLE</em>'dır ve <strong>IDOR</strong> başarıyla
+  sömürülmüştür. Admin panelinden modu <em>SECURE</em>'a alıp tekrar dene.
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const input = document.getElementById("invoice-id");
+  const btn = document.getElementById("fetch-btn");
+  const result = document.getElementById("attack-result");
+  const badge = document.getElementById("resp-badge");
+  const curl = document.getElementById("curl-line");
+
+  function updateCurl() {
+    const id = input.value || "2001";
+    curl.textContent = `curl -b cookies.txt ${location.origin}/api/invoice/${id}`;
+  }
+  input.addEventListener("input", updateCurl);
+
+  document.querySelectorAll(".id-chip").forEach(el => {
+    el.addEventListener("click", () => {
+      input.value = el.dataset.id;
+      updateCurl();
+      attack();
+    });
+  });
+
+  btn.addEventListener("click", attack);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") attack(); });
+
+  async function attack() {
+    const id = input.value.trim();
+    if (!id) return;
+    badge.className = "pill pill-muted";
+    badge.textContent = "istek gönderiliyor…";
+    result.className = "result-loading";
+    result.textContent = "…";
+
+    const t0 = performance.now();
+    let res, data;
+    try {
+      res = await fetch(`/api/invoice/${id}`);
+      data = await res.json();
+    } catch (e) {
+      badge.className = "pill pill-warn";
+      badge.textContent = "ağ hatası";
+      result.className = "result-error";
+      result.textContent = "Sunucuya ulaşılamadı.";
+      return;
+    }
+    const ms = (performance.now() - t0).toFixed(0);
+
+    if (res.status === 404) {
+      badge.className = "pill pill-good";
+      badge.textContent = `HTTP ${res.status} • ${ms} ms`;
+      result.className = "result-blocked";
+      result.innerHTML = `
+        <div class="result-headline">🛡 Erişim engellendi</div>
+        <div class="muted">Sunucu 404 döndü — sahiplik kontrolü çalıştı
+          (ya da fatura gerçekten yok). Güvenli modda bu beklenen davranış.</div>
+        <pre>${escapeJson(data)}</pre>
+      `;
+      return;
+    }
+    if (res.status === 401) {
+      badge.className = "pill pill-warn";
+      badge.textContent = `HTTP ${res.status}`;
+      result.className = "result-error";
+      result.innerHTML = `<div class="result-headline">Önce giriş yap.</div><pre>${escapeJson(data)}</pre>`;
+      return;
+    }
+
+    const acc = data._access || {};
+    if (acc.unauthorized) {
+      badge.className = "pill pill-bad";
+      badge.textContent = `HTTP ${res.status} • IDOR! • ${ms} ms`;
+      result.className = "result-exploited";
+      result.innerHTML = `
+        <div class="result-headline">⚠ IDOR başarıyla sömürüldü</div>
+        <div class="muted">Bu fatura senin değil ama sunucu yine de verdi.
+        Kod, <code>owner_id == session.user_id</code> kontrolünü yapmıyor.</div>
+        ${renderInvoiceDetail(data)}
+        <pre>${escapeJson(data)}</pre>
+      `;
+    } else {
+      badge.className = "pill pill-ok";
+      badge.textContent = `HTTP ${res.status} • meşru erişim • ${ms} ms`;
+      result.className = "result-ok";
+      result.innerHTML = `
+        <div class="result-headline">✓ Meşru erişim</div>
+        <div class="muted">Bu fatura zaten sana ait${acc.is_admin ? " (admin yetkisiyle)" : ""}.</div>
+        ${renderInvoiceDetail(data)}
+        <pre>${escapeJson(data)}</pre>
+      `;
+    }
+  }
+
+  function renderInvoiceDetail(inv) {
+    return `
+      <div class="invoice-card">
+        <div class="invoice-head">
+          <span class="invoice-id">#${inv.id}</span>
+          <span class="invoice-amount">${inv.amount}</span>
+        </div>
+        <div class="invoice-body">
+          <div><span class="muted">Hizmet:</span> ${inv.service}</div>
+          <div><span class="muted">Sahip:</span> ${inv.owner} <span class="user-id">#${inv.owner_id}</span></div>
+          <div><span class="muted">Tarih:</span> ${inv.date}</div>
+          <div><span class="muted">Durum:</span> ${inv.status}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeJson(obj) {
+    return JSON.stringify(obj, null, 2)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  updateCurl();
+</script>
+{% endblock %}

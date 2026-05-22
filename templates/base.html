@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}IDOR Güvenlik Laboratuvarı{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="theme-dark">
+  {% block nav %}
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('dashboard') }}">
+        <span class="brand-mark">⚡</span>
+        IDOR Lab
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('dashboard') }}" class="nav-link">Faturalarım</a>
+        <a href="{{ url_for('attack_lab') }}" class="nav-link nav-attack">Saldırı Laboratuvarı</a>
+        <a href="{{ url_for('admin_panel') }}" class="nav-link">Admin Paneli</a>
+      </div>
+      <div class="nav-right">
+        <span id="mode-pill" class="pill pill-warn">MOD: ?</span>
+        {% if user %}
+          <span class="user-chip">
+            <span class="user-name">{{ user.name }}</span>
+            <span class="user-id">#{{ user.id }}</span>
+          </span>
+          <button id="logout-btn" class="btn btn-ghost">Çıkış</button>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+  {% endblock %}
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span>⚠ Sadece eğitim amaçlıdır — üretim ortamında kullanmayın</span>
+    <span>OWASP API1:2023 — Broken Object Level Authorization</span>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 > nul
-title IDOR Guvenlik Simulasyonu
+title IDOR Guvenlik Laboratuvari
 
 echo ============================================================
-echo   IDOR Guvenlik Simulasyonu - Baslatiliyor
+echo   IDOR Guvenlik Laboratuvari
 echo ============================================================
 
 python --version > nul 2>&1
@@ -21,13 +21,8 @@ echo [2/3] Bagimliliklar yukleniyor...
 call .venv\Scripts\activate.bat
 pip install -q -r requirements.txt
 
-echo [3/3] Uygulama baslatiliyor...
-echo.
-echo  GUI icin : python main_gui.py
-echo  API icin : python app.py
-echo  Testler  : python test_cases.py
-echo  Demo     : python exploit_demo.py (ayri terminalde, app.py calisirken)
-echo.
-
-python main_gui.py
+echo [3/3] Uygulama baslatiliyor -^> http://localhost:5000
+echo       Demo kullanicilar: ahmet/ahmet123, mehmet/mehmet123,
+echo                          ayse/ayse123, admin/admin123
+python app.py
 pause

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giriş — IDOR Güvenlik Laboratuvarı</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="theme-dark center-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="brand-mark big">⚡</div>
+      <h1>IDOR Güvenlik Laboratuvarı</h1>
+      <p class="muted">API güvenliğini canlı gözlemle</p>
+    </div>
+
+    <form id="login-form" class="form">
+      <label class="form-row">
+        <span>Kullanıcı adı</span>
+        <input type="text" name="username" id="username" required autocomplete="username" autofocus>
+      </label>
+      <label class="form-row">
+        <span>Parola</span>
+        <input type="password" name="password" id="password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+      <p id="login-error" class="error-text" hidden></p>
+    </form>
+
+    <div class="demo-users">
+      <div class="demo-title">Demo Kullanıcılar (tıkla, otomatik doldur)</div>
+      <div class="demo-grid">
+        <button type="button" class="chip" data-u="ahmet" data-p="ahmet123">
+          <strong>ahmet</strong><span>2 fatura</span>
+        </button>
+        <button type="button" class="chip" data-u="mehmet" data-p="mehmet123">
+          <strong>mehmet</strong><span>2 fatura</span>
+        </button>
+        <button type="button" class="chip" data-u="ayse" data-p="ayse123">
+          <strong>ayse</strong><span>2 fatura</span>
+        </button>
+        <button type="button" class="chip chip-admin" data-u="admin" data-p="admin123">
+          <strong>admin</strong><span>tümü</span>
+        </button>
+      </div>
+    </div>
+
+    <p class="footer-note">⚠ Bu giriş ekranı eğitim amaçlıdır. Gerçek sistemlerde
+    parolalar açık metin saklanmaz, demo kullanıcı listesi UI'da gösterilmez.</p>
+  </div>
+
+  <script>
+    document.querySelectorAll(".demo-users .chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.getElementById("username").value = btn.dataset.u;
+        document.getElementById("password").value = btn.dataset.p;
+        document.getElementById("password").focus();
+      });
+    });
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const err = document.getElementById("login-error");
+      err.hidden = true;
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          err.textContent = data.error || "Giriş başarısız.";
+          err.hidden = false;
+          return;
+        }
+        window.location.href = "/dashboard";
+      } catch (e) {
+        err.textContent = "Sunucuya ulaşılamadı.";
+        err.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

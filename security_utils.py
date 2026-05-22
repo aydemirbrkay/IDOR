@@ -25,6 +25,46 @@ security_logger = logging.getLogger("idor.security")
 
 
 # ---------------------------------------------------------------
+# CANLI LOG AKIŞI (Web UI için)
+# Loglara abone olmayan modüller bunu görmez; ama web UI bunu
+# kullanarak admin paneline gerçek-zamanlı log akışı sunar.
+# ---------------------------------------------------------------
+class _UICaptureHandler(logging.Handler):
+    """Logger'a düşen her kaydı kayıtlı UI sink'lerine iletir."""
+
+    def __init__(self):
+        super().__init__()
+        self._sinks = []
+
+    def add_sink(self, sink):
+        self._sinks.append(sink)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+        except Exception:
+            msg = record.getMessage()
+        for sink in self._sinks:
+            try:
+                sink(record.levelname, record.getMessage())
+            except Exception:
+                pass
+
+
+_ui_handler = _UICaptureHandler()
+_ui_handler.setLevel(logging.INFO)
+security_logger.addHandler(_ui_handler)
+
+
+def register_log_sink(callback):
+    """UI'ın log akışını dinleyebilmesi için callback kaydeder.
+
+    callback(level: str, message: str) imzasında olmalıdır.
+    """
+    _ui_handler.add_sink(callback)
+
+
+# ---------------------------------------------------------------
 # ÇEKİRDEK FONKSİYON: Nesne Sahipliği Kontrolü
 # ---------------------------------------------------------------
 

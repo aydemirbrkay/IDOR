@@ -40,7 +40,7 @@ class BaseTestCase(unittest.TestCase):
 
     def login(self, username: str, password: str):
         return self.client.post(
-            "/login",
+            "/api/login",
             data=json.dumps({"username": username, "password": password}),
             content_type="application/json",
         )
@@ -91,7 +91,7 @@ class TestAuthentication(BaseTestCase):
     def test_logout_clears_session(self):
         """Çıkış sonrası oturum temizlenmeli."""
         self.login_as_ahmet()
-        self.client.post("/logout")
+        self.client.post("/api/logout")
         # Çıkış sonrası faturaya erişim reddedilmeli
         r = self.client.get("/api/invoice/1001")
         self.assertEqual(r.status_code, 401)
@@ -190,7 +190,7 @@ class TestSecureMode(BaseTestCase):
 
     def test_mehmet_can_access_own_invoices(self):
         """Mehmet kendi oturumunda kendi faturalarına erişebilmeli."""
-        self.client.post("/logout")
+        self.client.post("/api/logout")
         self.login_as_mehmet()
         r = self.client.get("/api/invoice/2001")
         self.assertEqual(r.status_code, 200)

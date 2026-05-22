@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Admin Paneli — IDOR Lab{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>Admin Paneli</h1>
+    <p class="muted">Modu değiştir, istatistikleri izle, canlı güvenlik loglarını oku.</p>
+  </div>
+</section>
+
+<div class="admin-grid">
+  <div class="card mode-card">
+    <div class="card-head">
+      <h2>Çalışma Modu</h2>
+      <span id="mode-pill-big" class="pill pill-warn">?</span>
+    </div>
+    <p class="muted">
+      <strong>VULNERABLE</strong>: sahiplik kontrolü yok — IDOR açık.<br>
+      <strong>SECURE</strong>: <code>check_object_ownership</code> aktif — IDOR kapalı.
+    </p>
+    <button id="toggle-mode" class="btn btn-primary btn-block">Modu Değiştir</button>
+  </div>
+
+  <div class="card stats-card">
+    <div class="card-head"><h2>İstatistikler</h2>
+      <button id="reset-stats" class="btn btn-ghost btn-sm">Sıfırla</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Toplam İstek</div></div>
+      <div class="stat stat-bad"><div class="stat-num" id="stat-exp">0</div><div class="stat-label">Başarılı IDOR Exploit</div></div>
+      <div class="stat stat-good"><div class="stat-num" id="stat-block">0</div><div class="stat-label">Engellenen Yetkisiz İstek</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card log-card">
+  <div class="card-head">
+    <h2>Canlı Güvenlik Logları</h2>
+    <div class="card-actions">
+      <label class="toggle">
+        <input type="checkbox" id="autoscroll" checked> otomatik kaydır
+      </label>
+      <button id="clear-logs" class="btn btn-ghost btn-sm">Temizle</button>
+    </div>
+  </div>
+  <div id="logs" class="log-stream"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const modePill = document.getElementById("mode-pill-big");
+  const btnToggle = document.getElementById("toggle-mode");
+  const btnReset = document.getElementById("reset-stats");
+  const btnClear = document.getElementById("clear-logs");
+  const logEl = document.getElementById("logs");
+  const autoscroll = document.getElementById("autoscroll");
+  let seenLogs = 0;
+
+  function paintMode(secure) {
+    const label = secure ? "SECURE — IDOR kapalı" : "VULNERABLE — IDOR açık";
+    modePill.textContent = label;
+    modePill.className = "pill " + (secure ? "pill-ok" : "pill-bad");
+  }
+
+  async function refreshAll() {
+    try {
+      const [mRes, sRes, lRes] = await Promise.all([
+        fetch("/admin/mode"), fetch("/admin/stats"), fetch("/admin/logs"),
+      ]);
+      const m = await mRes.json();
+      const s = await sRes.json();
+      const l = await lRes.json();
+      paintMode(m.secure);
+      document.getElementById("stat-total").textContent = s.total_requests;
+      document.getElementById("stat-exp").textContent = s.successful_exploits;
+      document.getElementById("stat-block").textContent = s.blocked_requests;
+      renderLogs(l.logs);
+    } catch (e) { /* sessizce geç */ }
+  }
+
+  function renderLogs(logs) {
+    if (logs.length === seenLogs) return;
+    seenLogs = logs.length;
+    logEl.innerHTML = logs.map(L => {
+      const cls = L.level === "WARNING" ? "log-warn"
+                : L.level === "ERROR" ? "log-err" : "log-info";
+      const isExploit = L.message.includes("[IDOR EXPLOIT]");
+      const isBlocked = L.message.includes("YETKİSİZ ERİŞİM GİRİŞİMİ");
+      const extra = isExploit ? " log-exploit" : (isBlocked ? " log-blocked" : "");
+      return `<div class="log-row ${cls}${extra}">
+        <span class="log-ts">${L.ts}</span>
+        <span class="log-level">${L.level}</span>
+        <span class="log-msg">${escapeHtml(L.message)}</span>
+      </div>`;
+    }).join("");
+    if (autoscroll.checked) logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  btnToggle.addEventListener("click", async () => {
+    await fetch("/admin/toggle-mode", { method: "POST" });
+    refreshAll();
+  });
+  btnReset.addEventListener("click", async () => {
+    await fetch("/admin/reset-stats", { method: "POST" });
+    refreshAll();
+  });
+  btnClear.addEventListener("click", async () => {
+    await fetch("/admin/clear-logs", { method: "POST" });
+    seenLogs = -1; refreshAll();
+  });
+
+  refreshAll();
+  setInterval(refreshAll, 1500);
+</script>
+{% endblock %}

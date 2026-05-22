@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Faturalarım — IDOR Lab{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>Faturalarım</h1>
+    <p class="muted">Oturumdaki kullanıcıya ait faturalar. Yetkisiz ID denemeleri için Saldırı Laboratuvarı'na geç.</p>
+  </div>
+  <a href="{{ url_for('attack_lab') }}" class="btn btn-danger">⚔ Saldırı Laboratuvarı</a>
+</section>
+
+<div id="my-invoices" class="invoice-grid">
+  <div class="skeleton">Yükleniyor…</div>
+</div>
+
+<section class="callout">
+  <strong>İpucu:</strong> Sağ üstteki mod rozeti <em>VULNERABLE</em> ise,
+  Saldırı Laboratuvarı'nda başka kullanıcıların fatura ID'sini girip
+  yetkisiz erişimi <u>canlı</u> deneyebilirsin. Admin panelinden modu
+  <em>SECURE</em>'a alıp aynı saldırının nasıl engellendiğini gör.
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (async () => {
+    const grid = document.getElementById("my-invoices");
+    try {
+      const res = await fetch("/api/my-invoices");
+      const data = await res.json();
+      if (!data.invoices?.length) {
+        grid.innerHTML = '<div class="empty">Henüz fatura yok.</div>';
+        return;
+      }
+      grid.innerHTML = data.invoices.map(renderInvoiceCard).join("");
+    } catch (e) {
+      grid.innerHTML = '<div class="empty">Yüklenemedi.</div>';
+    }
+  })();
+</script>
+{% endblock %}

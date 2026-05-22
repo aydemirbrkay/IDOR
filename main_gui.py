@@ -433,7 +433,7 @@ class AttackerPanel(tk.Frame):
         u = self.user_var.get()
         p = self.pass_var.get()
         try:
-            r = self.session.post(f"{BASE_URL}/login",
+            r = self.session.post(f"{BASE_URL}/api/login",
                                   json={"username": u, "password": p})
             data = r.json()
             if r.status_code == 200:
@@ -456,7 +456,7 @@ class AttackerPanel(tk.Frame):
 
     def _logout(self):
         try:
-            self.session.post(f"{BASE_URL}/logout")
+            self.session.post(f"{BASE_URL}/api/logout")
             self.login_status.config(text="⬤ Oturum kapalı", fg=C["dim"])
             self.login_btn.config(state=tk.NORMAL)
             self.logout_btn.config(state=tk.DISABLED)
