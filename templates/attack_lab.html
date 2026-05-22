@@ -3,56 +3,156 @@
 {% block content %}
 <section class="page-header">
   <div>
-    <h1>⚔ Saldırı Laboratuvarı</h1>
-    <p class="muted">URL'deki fatura ID'sini değiştirerek IDOR zafiyetini canlı dene.</p>
+    <h1>⚔ Saldırı Laboratuvarı — IDOR'u Canlı Dene</h1>
+    <p class="muted">URL'deki fatura numarasını değiştirerek başkasının verisine erişmeyi dene. Hiç bilmiyorsan aşağıdaki adımları sırayla takip et.</p>
   </div>
   <a href="{{ url_for('admin_panel') }}" class="btn btn-ghost">Admin Paneli →</a>
 </section>
 
-<div class="lab-grid">
-  <div class="card">
-    <div class="card-head">
-      <h2>1. Hedefi Seç</h2>
-      <span class="muted">Sistemdeki tüm fatura ID'leri (keşif aşaması)</span>
+<!-- ============================================================ -->
+<!-- AÇIKLAMA: NE YAPACAĞIZ?                                       -->
+<!-- ============================================================ -->
+<section class="explain-box">
+  <div class="explain-row">
+    <div class="explain-num">?</div>
+    <div>
+      <h2 style="margin-bottom:6px">Burada ne yapıyoruz?</h2>
+      <p class="muted" style="margin:0 0 8px">
+        Bu sayfa bir <strong>IDOR (Insecure Direct Object Reference)</strong> zafiyetini canlı olarak deneme alanıdır.
+        Şu an <strong>{{ user.name }}</strong> olarak giriş yaptın
+        (kullanıcı ID'n: <code>#{{ user.id }}</code>).
+        Senin faturaların sistemde <strong>{{ my_ids|join(', ') }}</strong> numaralı faturalar.
+        Aşağıdaki butonlardan <strong>başkasının</strong> fatura numarasına tıklayıp,
+        sunucunun sana o veriyi <em>yetkin olmadığı halde</em> verip vermediğini göreceğiz.
+      </p>
+      <p class="muted" style="margin:0">
+        <strong>Hedef:</strong> Sağ üstte mod rozeti <span class="pill pill-bad">VULNERABLE</span>
+        iken başkasının faturasını görebilmek = saldırı başarılı. Sonra Admin Paneli'nden mod'u
+        <span class="pill pill-ok">SECURE</span> yapıp aynı saldırının nasıl engellendiğini göreceğiz.
+      </p>
     </div>
-    <div class="id-grid">
-      {% for inv_id in all_ids %}
-        <button class="id-chip" data-id="{{ inv_id }}">#{{ inv_id }}</button>
-      {% endfor %}
-    </div>
+  </div>
+</section>
 
-    <div class="form-row" style="margin-top:14px">
-      <span>Manuel ID gir</span>
-      <div class="input-row">
-        <input type="number" id="invoice-id" placeholder="ör. 2001" min="1">
-        <button id="fetch-btn" class="btn btn-primary">İstek Gönder</button>
+<!-- ============================================================ -->
+<!-- ADIM ADIM REHBER                                              -->
+<!-- ============================================================ -->
+<ol class="steps">
+  <li class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Hedef seç — başkasının fatura numarasına tıkla</h3>
+      <p class="muted">
+        Aşağıda sistemdeki <strong>tüm</strong> fatura ID'leri var. Senin olanlar
+        <span class="badge-mine">SENİN</span> etiketli. <strong>SENİN olmayan</strong>
+        bir numaraya tıkla — örneğin
+        {% if other_example_id %}<code>#{{ other_example_id }}</code>{% else %}<code>#2001</code>{% endif %}.
+        Gerçek hayatta saldırgan bu numarayı tahmin eder veya log'lardan, URL'lerden bulur.
+      </p>
+      <div class="id-grid">
+        {% for inv_id in all_ids %}
+          {% set mine = inv_id in my_ids %}
+          <button class="id-chip{% if mine %} id-chip-mine{% endif %}" data-id="{{ inv_id }}">
+            #{{ inv_id }}
+            {% if mine %}<span class="badge-mine">SENİN</span>{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="manual-row">
+        <label class="muted" for="invoice-id">veya manuel bir ID gir:</label>
+        <div class="input-row">
+          <input type="number" id="invoice-id" placeholder="ör. 2001" min="1">
+          <button id="fetch-btn" class="btn btn-danger">İstek Gönder →</button>
+        </div>
       </div>
     </div>
+  </li>
 
-    <div class="curl-hint">
-      <span class="muted">Aynı isteği terminalden de dene:</span>
-      <code id="curl-line">curl -b cookies.txt http://localhost:5000/api/invoice/2001</code>
+  <li class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Tarayıcının ne yaptığını izle — URL ve istek</h3>
+      <p class="muted">
+        "İstek Gönder" butonu, tarayıcına şu adrese gizli bir istek gönderir:
+      </p>
+      <div class="url-anatomy" id="url-anatomy">
+        <span class="url-part">{{ '{' }}origin{{ '}' }}</span><!--
+     --><span class="url-part url-path">/api/invoice/</span><!--
+     --><span class="url-part url-id" id="url-id">2001</span>
+        <div class="url-arrow">↑ saldırının yapıldığı yer — sadece bu sayı değişir</div>
+      </div>
+      <div class="curl-hint">
+        <span class="muted">Aynı isteği terminalden de çalıştırabilirsin (önce <code>./run.sh</code> ile sunucuyu çalışır tut):</span>
+        <code id="curl-line">curl -b cookies.txt http://localhost:5000/api/invoice/2001</code>
+        <span class="muted" style="font-size:11.5px">Not: <code>-b cookies.txt</code> oturum çerezini taşır. Tarayıcıda zaten otomatik gönderilir.</span>
+      </div>
     </div>
-  </div>
+  </li>
 
-  <div class="card">
-    <div class="card-head">
-      <h2>2. Sunucu Yanıtı</h2>
-      <span id="resp-badge" class="pill pill-muted">bekleniyor…</span>
+  <li class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Sunucu yanıtını oku</h3>
+      <div class="card" style="padding:14px;margin-top:6px">
+        <div class="card-head">
+          <h2 style="font-size:13.5px">Sunucu Yanıtı</h2>
+          <span id="resp-badge" class="pill pill-muted">henüz istek gönderilmedi</span>
+        </div>
+        <div id="attack-result" class="result-empty">
+          Yukarıdaki bir numaraya tıkla — buraya gelen yanıt anında düşecek.
+        </div>
+      </div>
     </div>
-    <div id="attack-result" class="result-empty">
-      Sol panelden bir ID seç veya gir, "İstek Gönder"e bas.
-    </div>
-  </div>
-</div>
+  </li>
 
-<section class="callout callout-danger">
-  <strong>Senaryo:</strong> <code>ahmet</code> olarak giriş yapmış durumdasın
-  (ID'lerin <code>1001</code> ve <code>1002</code>). Şimdi
-  <code>2001</code> veya <code>3001</code> dene — başkalarının faturasına
-  erişebilirsen mod <em>VULNERABLE</em>'dır ve <strong>IDOR</strong> başarıyla
-  sömürülmüştür. Admin panelinden modu <em>SECURE</em>'a alıp tekrar dene.
-</section>
+  <li class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Sonucu yorumla</h3>
+      <div class="legend">
+        <div class="legend-item legend-bad">
+          <strong>⚠ IDOR başarıyla sömürüldü</strong>
+          <span class="muted">Sunucu sana ait olmayan bir faturayı verdi. Mod VULNERABLE demektir.</span>
+        </div>
+        <div class="legend-item legend-ok">
+          <strong>🛡 Erişim engellendi (HTTP 404)</strong>
+          <span class="muted">Sunucu sahiplik kontrolü yaptı ve veriyi vermedi. Mod SECURE demektir.</span>
+        </div>
+        <div class="legend-item legend-info">
+          <strong>✓ Meşru erişim</strong>
+          <span class="muted">Bu fatura zaten senin (veya admin'sin). Saldırı sayılmaz.</span>
+        </div>
+      </div>
+    </div>
+  </li>
+
+  <li class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Şimdi SECURE moda geç — aynı saldırı engellenmeli</h3>
+      <p class="muted">
+        Admin Paneli'ne git → <strong>Modu Değiştir</strong>'e bas → bu sayfaya geri dön.
+        Aynı numaraya tıkladığında bu kez <strong>HTTP 404</strong> ve <em>"Erişim engellendi"</em> görmelisin.
+        Aradaki tek fark: tek satırlık <code>check_object_ownership</code> kontrolü.
+      </p>
+      <a class="btn btn-primary" href="{{ url_for('admin_panel') }}">Admin Paneli'ne Git →</a>
+    </div>
+  </li>
+
+  <li class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <h3>Logları gör — saldırgan iz bırakır</h3>
+      <p class="muted">
+        Her saldırı ve her engelleme Admin Paneli'ndeki <strong>canlı log akışına</strong> düşer.
+        VULNERABLE modda <code>[IDOR EXPLOIT]</code> satırlarını,
+        SECURE modda <code>YETKİSİZ ERİŞİM GİRİŞİMİ</code> satırlarını göreceksin.
+        Sunum sırasında bu farkı yan yana göstermek çok etkilidir.
+      </p>
+    </div>
+  </li>
+</ol>
 {% endblock %}
 
 {% block scripts %}
@@ -62,18 +162,25 @@
   const result = document.getElementById("attack-result");
   const badge = document.getElementById("resp-badge");
   const curl = document.getElementById("curl-line");
+  const urlIdEl = document.getElementById("url-id");
 
-  function updateCurl() {
+  const MY_IDS = {{ my_ids|tojson }};
+
+  function updateUrl() {
     const id = input.value || "2001";
     curl.textContent = `curl -b cookies.txt ${location.origin}/api/invoice/${id}`;
+    urlIdEl.textContent = id;
   }
-  input.addEventListener("input", updateCurl);
+  input.addEventListener("input", updateUrl);
 
   document.querySelectorAll(".id-chip").forEach(el => {
     el.addEventListener("click", () => {
       input.value = el.dataset.id;
-      updateCurl();
+      updateUrl();
       attack();
+      // Adım 3'e otomatik kaydır ki kullanıcı yanıtı görsün
+      document.querySelector(".steps .step:nth-child(3)")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   });
 
@@ -82,7 +189,13 @@
 
   async function attack() {
     const id = input.value.trim();
-    if (!id) return;
+    if (!id) {
+      badge.className = "pill pill-warn";
+      badge.textContent = "önce bir ID gir";
+      return;
+    }
+
+    const isMine = MY_IDS.includes(parseInt(id, 10));
     badge.className = "pill pill-muted";
     badge.textContent = "istek gönderiliyor…";
     result.className = "result-loading";
@@ -104,45 +217,56 @@
 
     if (res.status === 404) {
       badge.className = "pill pill-good";
-      badge.textContent = `HTTP ${res.status} • ${ms} ms`;
+      badge.textContent = `HTTP 404 • ${ms} ms`;
       result.className = "result-blocked";
       result.innerHTML = `
         <div class="result-headline">🛡 Erişim engellendi</div>
-        <div class="muted">Sunucu 404 döndü — sahiplik kontrolü çalıştı
-          (ya da fatura gerçekten yok). Güvenli modda bu beklenen davranış.</div>
-        <pre>${escapeJson(data)}</pre>
+        <p class="muted" style="margin:6px 0">
+          Sunucu <code>404 Not Found</code> döndü. Üç olası sebep:
+        </p>
+        <ul class="muted" style="margin:0 0 8px 18px">
+          <li>Mod <strong>SECURE</strong> — sahiplik kontrolü çalıştı (asıl beklenen).</li>
+          <li>Böyle bir ID gerçekten yok.</li>
+          <li>403 yerine bilerek 404 dönüyoruz (bilgi sızdırmamak için).</li>
+        </ul>
+        <details><summary class="muted">Ham JSON yanıt</summary><pre>${escapeJson(data)}</pre></details>
       `;
       return;
     }
     if (res.status === 401) {
       badge.className = "pill pill-warn";
-      badge.textContent = `HTTP ${res.status}`;
+      badge.textContent = `HTTP 401`;
       result.className = "result-error";
-      result.innerHTML = `<div class="result-headline">Önce giriş yap.</div><pre>${escapeJson(data)}</pre>`;
+      result.innerHTML = `<div class="result-headline">Önce giriş yap.</div>
+        <p class="muted">Oturum çerezin yok ya da sona ermiş.</p>
+        <pre>${escapeJson(data)}</pre>`;
       return;
     }
 
     const acc = data._access || {};
     if (acc.unauthorized) {
       badge.className = "pill pill-bad";
-      badge.textContent = `HTTP ${res.status} • IDOR! • ${ms} ms`;
+      badge.textContent = `HTTP 200 • IDOR! • ${ms} ms`;
       result.className = "result-exploited";
       result.innerHTML = `
         <div class="result-headline">⚠ IDOR başarıyla sömürüldü</div>
-        <div class="muted">Bu fatura senin değil ama sunucu yine de verdi.
-        Kod, <code>owner_id == session.user_id</code> kontrolünü yapmıyor.</div>
+        <p class="muted" style="margin:6px 0">
+          Bu fatura <strong>${data.owner}</strong>'a ait (kullanıcı #${data.owner_id}),
+          ama sunucu sana — kullanıcı #${acc.requested_by_user_id} — yine de verdi.
+          Çünkü VULNERABLE modda kod <code>owner_id == session.user_id</code>
+          kontrolünü yapmıyor.
+        </p>
         ${renderInvoiceDetail(data)}
-        <pre>${escapeJson(data)}</pre>
+        <details><summary class="muted">Ham JSON yanıt</summary><pre>${escapeJson(data)}</pre></details>
       `;
     } else {
       badge.className = "pill pill-ok";
-      badge.textContent = `HTTP ${res.status} • meşru erişim • ${ms} ms`;
+      badge.textContent = `HTTP 200 • meşru erişim • ${ms} ms`;
       result.className = "result-ok";
       result.innerHTML = `
         <div class="result-headline">✓ Meşru erişim</div>
-        <div class="muted">Bu fatura zaten sana ait${acc.is_admin ? " (admin yetkisiyle)" : ""}.</div>
+        <p class="muted">Bu fatura zaten ${acc.is_admin ? "yöneticisi olduğun sistemde sana açık" : "sana ait"}. Saldırı sayılmaz — başka bir kullanıcının numarasını dene.</p>
         ${renderInvoiceDetail(data)}
-        <pre>${escapeJson(data)}</pre>
       `;
     }
   }
@@ -169,6 +293,6 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  updateCurl();
+  updateUrl();
 </script>
 {% endblock %}

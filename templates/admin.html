@@ -3,28 +3,51 @@
 {% block content %}
 <section class="page-header">
   <div>
-    <h1>Admin Paneli</h1>
-    <p class="muted">Modu değiştir, istatistikleri izle, canlı güvenlik loglarını oku.</p>
+    <h1>Admin Paneli — Mod, İstatistik, Loglar</h1>
+    <p class="muted">
+      Buradan uygulamayı VULNERABLE ↔ SECURE arasında değiştirir, saldırıların gerçek
+      zamanlı izini bırakır ve istatistiklerini sayarsın.
+    </p>
+  </div>
+</section>
+
+<section class="explain-box">
+  <div class="explain-row">
+    <div class="explain-num">i</div>
+    <div>
+      <h2 style="margin-bottom:6px">Bu panel sunumun kalbidir</h2>
+      <p class="muted" style="margin:0">
+        Sunum akışı: (1) <strong>VULNERABLE</strong>'da saldırıyı göster → log'da
+        <code>[IDOR EXPLOIT]</code> belirsin. (2) Aşağıdaki <strong>"Modu Değiştir"</strong> butonuyla
+        <strong>SECURE</strong>'a al. (3) Aynı saldırıyı tekrarla → bu kez log'da
+        <code>YETKİSİZ ERİŞİM GİRİŞİMİ</code> ve HTTP 404 göreceksin.
+        Aradaki fark <code>app.py</code> içindeki <strong>tek satırlık</strong>
+        <code>check_object_ownership</code> kontrolü.
+      </p>
+    </div>
   </div>
 </section>
 
 <div class="admin-grid">
   <div class="card mode-card">
     <div class="card-head">
-      <h2>Çalışma Modu</h2>
+      <h2>1. Çalışma Modu</h2>
       <span id="mode-pill-big" class="pill pill-warn">?</span>
     </div>
     <p class="muted">
-      <strong>VULNERABLE</strong>: sahiplik kontrolü yok — IDOR açık.<br>
-      <strong>SECURE</strong>: <code>check_object_ownership</code> aktif — IDOR kapalı.
+      <strong>VULNERABLE</strong>: Sahiplik kontrolü <em>yok</em> — IDOR açık (saldırı çalışır).<br>
+      <strong>SECURE</strong>: <code>check_object_ownership</code> aktif — IDOR <em>kapalı</em> (saldırı engellenir).
     </p>
     <button id="toggle-mode" class="btn btn-primary btn-block">Modu Değiştir</button>
   </div>
 
   <div class="card stats-card">
-    <div class="card-head"><h2>İstatistikler</h2>
+    <div class="card-head"><h2>2. İstatistikler</h2>
       <button id="reset-stats" class="btn btn-ghost btn-sm">Sıfırla</button>
     </div>
+    <p class="muted" style="margin:0 0 8px">
+      Tüm sayaçlar canlı. Saldırı Laboratuvarı'nda yapılan her denemeyle artar.
+    </p>
     <div class="stats-grid">
       <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Toplam İstek</div></div>
       <div class="stat stat-bad"><div class="stat-num" id="stat-exp">0</div><div class="stat-label">Başarılı IDOR Exploit</div></div>
@@ -35,13 +58,20 @@
 
 <div class="card log-card">
   <div class="card-head">
-    <h2>Canlı Güvenlik Logları</h2>
+    <h2>3. Canlı Güvenlik Logları</h2>
     <div class="card-actions">
       <label class="toggle">
         <input type="checkbox" id="autoscroll" checked> otomatik kaydır
       </label>
       <button id="clear-logs" class="btn btn-ghost btn-sm">Temizle</button>
     </div>
+  </div>
+  <div class="log-legend">
+    <span class="log-legend-item log-info">INFO</span> normal işlem
+    &nbsp;·&nbsp;
+    <span class="log-legend-item log-warn">WARNING</span> <code>[IDOR EXPLOIT]</code> veya <code>YETKİSİZ ERİŞİM GİRİŞİMİ</code>
+    &nbsp;·&nbsp;
+    <span class="muted">Her 1.5 sn'de yenilenir</span>
   </div>
   <div id="logs" class="log-stream"></div>
 </div>

@@ -107,30 +107,53 @@ def login_page():
     return render_template("login.html")
 
 
+def _current_user_view():
+    """USERS kaydını döndürür + 'username' alanı (parolasız) — template'lere."""
+    username = session.get("username")
+    user = USERS.get(username)
+    if not user:
+        return None
+    return {
+        "id": user["id"],
+        "name": user["name"],
+        "role": user["role"],
+        "username": username,
+    }
+
+
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     if "user_id" not in session:
         return redirect(url_for("login_page"))
-    user = USERS.get(session.get("username"))
-    return render_template("dashboard.html", user=user)
+    return render_template("dashboard.html", user=_current_user_view())
 
 
 @app.route("/attack-lab", methods=["GET"])
 def attack_lab():
     if "user_id" not in session:
         return redirect(url_for("login_page"))
-    user = USERS.get(session.get("username"))
-    # Tüm fatura ID'lerini saldırgan keşif için göster
+    user = _current_user_view()
     all_ids = sorted(INVOICES.keys())
-    return render_template("attack_lab.html", user=user, all_ids=all_ids)
+    my_ids = sorted(
+        inv_id for inv_id, inv in INVOICES.items()
+        if inv["owner_id"] == session["user_id"]
+    )
+    # "Başkasına ait" örnek ID — UI'da öneri olarak gösterilir
+    other_example_id = next((i for i in all_ids if i not in my_ids), None)
+    return render_template(
+        "attack_lab.html",
+        user=user,
+        all_ids=all_ids,
+        my_ids=my_ids,
+        other_example_id=other_example_id,
+    )
 
 
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     if "user_id" not in session:
         return redirect(url_for("login_page"))
-    user = USERS.get(session.get("username"))
-    return render_template("admin.html", user=user)
+    return render_template("admin.html", user=_current_user_view())
 
 
 # ---------------------------------------------------------------

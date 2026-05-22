@@ -4,9 +4,33 @@
 <section class="page-header">
   <div>
     <h1>Faturalarım</h1>
-    <p class="muted">Oturumdaki kullanıcıya ait faturalar. Yetkisiz ID denemeleri için Saldırı Laboratuvarı'na geç.</p>
+    <p class="muted">
+      Şu an <strong>{{ user.name }}</strong> ({{ user.username if user.username else user.role }}) olarak giriş yaptın.
+      Burada <em>sadece sana ait</em> faturaları görüyorsun — uygulamanın <strong>meşru</strong> kullanım yüzü budur.
+    </p>
   </div>
-  <a href="{{ url_for('attack_lab') }}" class="btn btn-danger">⚔ Saldırı Laboratuvarı</a>
+  <a href="{{ url_for('attack_lab') }}" class="btn btn-danger">⚔ Saldırı Laboratuvarı'na Geç</a>
+</section>
+
+<section class="explain-box">
+  <div class="explain-row">
+    <div class="explain-num">i</div>
+    <div>
+      <h2 style="margin-bottom:6px">Bu sayfa ne anlatıyor?</h2>
+      <p class="muted" style="margin:0 0 8px">
+        Senaryo: bir muhasebe yazılımındasın. <strong>"Faturalarım"</strong> sayfası,
+        oturum açan kullanıcıya ait faturaları listeler. Bu sayfa <em>doğru çalışıyor</em>:
+        sunucu <code>WHERE owner_id = senin_id</code> filtresi uygulayıp sadece sana ait
+        kayıtları gönderiyor.
+      </p>
+      <p class="muted" style="margin:0">
+        Ama uygulamada bir de <strong>tek bir faturayı görüntüleme</strong> endpoint'i var:
+        <code>/api/invoice/&lt;id&gt;</code>. <em>İşte zafiyet orada</em> — orada sahiplik
+        kontrolü yapılmıyor ve URL'deki ID'yi değiştirerek başkasının faturasını çekebilirsin.
+        Bunu denemek için <strong>Saldırı Laboratuvarı</strong> sekmesine geç.
+      </p>
+    </div>
+  </div>
 </section>
 
 <div id="my-invoices" class="invoice-grid">
@@ -14,10 +38,11 @@
 </div>
 
 <section class="callout">
-  <strong>İpucu:</strong> Sağ üstteki mod rozeti <em>VULNERABLE</em> ise,
-  Saldırı Laboratuvarı'nda başka kullanıcıların fatura ID'sini girip
-  yetkisiz erişimi <u>canlı</u> deneyebilirsin. Admin panelinden modu
-  <em>SECURE</em>'a alıp aynı saldırının nasıl engellendiğini gör.
+  <strong>Sıradaki adım:</strong> Sağ üstteki mod rozeti
+  <span class="pill pill-bad">VULNERABLE</span> ise saldırı çalışacak demektir.
+  <a href="{{ url_for('attack_lab') }}">Saldırı Laboratuvarı</a>'na geç ve başkasının ID'sini dene.
+  Sonra <a href="{{ url_for('admin_panel') }}">Admin Paneli</a>'nden modu
+  <span class="pill pill-ok">SECURE</span>'a alıp aynı saldırının nasıl engellendiğini gör.
 </section>
 {% endblock %}
 

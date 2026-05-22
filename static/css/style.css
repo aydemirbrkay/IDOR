@@ -309,3 +309,129 @@ input:focus { outline: none; border-color: var(--accent); }
 .log-blocked { background: rgba(92,196,214,.06); }
 
 .toggle { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+
+/* Explain box (Bu sayfa ne anlatıyor?) ---------------- */
+.explain-box {
+  background: rgba(122,162,247,.06);
+  border: 1px solid rgba(122,162,247,.25);
+  border-radius: 12px; padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.explain-row { display: flex; gap: 14px; align-items: flex-start; }
+.explain-num {
+  flex: 0 0 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #0c0e15; font-weight: 800; border-radius: 10px;
+  font-size: 18px;
+}
+
+/* Steps (Saldırı laboratuvarı 1..6) ------------------- */
+.steps {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.step {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px;
+}
+.step-num {
+  flex: 0 0 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bad); color: #1a0a0b;
+  font-weight: 800; border-radius: 50%;
+  font-size: 16px;
+}
+.step:nth-child(5) .step-num,
+.step:nth-child(6) .step-num { background: var(--good); color: #0c1a0a; }
+.step-body { flex: 1; min-width: 0; }
+.step-body h3 { margin: 0 0 6px; font-size: 15px; }
+
+/* Manual ID input row --------------------------------- */
+.manual-row {
+  margin-top: 14px; padding: 12px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* ID chip — "SENİN" rozeti ---------------------------- */
+.id-chip {
+  position: relative;
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 8px 6px;
+}
+.id-chip-mine { border-color: rgba(143,217,132,.45); color: var(--good); }
+.id-chip-mine:hover { border-color: rgba(143,217,132,.7); color: var(--good); }
+.badge-mine {
+  font-size: 9px; letter-spacing: .5px; font-weight: 700;
+  background: rgba(143,217,132,.18); color: var(--good);
+  padding: 1px 5px; border-radius: 4px;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+}
+
+/* URL anatomy ----------------------------------------- */
+.url-anatomy {
+  background: #0a0c12; border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 15px;
+  position: relative; margin-top: 8px;
+}
+.url-part { color: var(--muted); }
+.url-path { color: var(--accent); }
+.url-id {
+  color: var(--bad); font-weight: 700;
+  border-bottom: 2px solid var(--bad);
+  padding: 0 2px;
+}
+.url-arrow {
+  margin-top: 8px; font-size: 11.5px; color: var(--bad);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Result interpretation legend ------------------------ */
+.legend {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+}
+@media (max-width: 800px) { .legend { grid-template-columns: 1fr; } }
+.legend-item {
+  padding: 12px; border-radius: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.legend-bad  { border-color: rgba(244,113,116,.35); }
+.legend-bad  strong { color: var(--bad); }
+.legend-ok   { border-color: rgba(92,196,214,.35); }
+.legend-ok   strong { color: var(--ok); }
+.legend-info { border-color: rgba(143,217,132,.35); }
+.legend-info strong { color: var(--good); }
+
+/* details (Ham JSON yanıt) ---------------------------- */
+details { margin-top: 8px; }
+details > summary { cursor: pointer; padding: 4px 0; font-size: 12.5px; }
+
+/* Login: intro-tip ------------------------------------ */
+.intro-tip {
+  background: rgba(122,162,247,.08);
+  border: 1px solid rgba(122,162,247,.3);
+  border-radius: 10px; padding: 10px 12px;
+  font-size: 12.5px; line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+/* Admin log legend ------------------------------------ */
+.log-legend {
+  padding: 6px 18px 10px; font-size: 11.5px; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: #0a0c12;
+}
+.log-legend-item {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  font-family: "JetBrains Mono", monospace; font-weight: 700;
+  font-size: 10.5px; letter-spacing: .3px;
+  background: var(--card); margin-right: 2px;
+}
+.log-legend-item.log-info { color: var(--ok); }
+.log-legend-item.log-warn { color: var(--warn); }
