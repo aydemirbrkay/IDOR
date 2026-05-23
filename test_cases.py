@@ -22,7 +22,7 @@ import os
 # app.py'nin aynı dizinde olduğundan emin ol
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import app, SECURE_MODE, STATS
+from app import app, SECURE_MODE, STATS, login_limiter
 from security_utils import check_object_ownership
 
 
@@ -37,6 +37,8 @@ class BaseTestCase(unittest.TestCase):
         STATS["total_requests"] = 0
         STATS["blocked_requests"] = 0
         STATS["successful_exploits"] = 0
+        # Rate limiter testler arası birikmesin diye sıfırla
+        login_limiter.reset()
 
     def login(self, username: str, password: str):
         return self.client.post(
@@ -50,6 +52,9 @@ class BaseTestCase(unittest.TestCase):
 
     def login_as_mehmet(self):
         return self.login("mehmet", "mehmet123")
+
+    def login_as_admin(self):
+        return self.login("admin", "admin123")
 
     def set_vulnerable(self):
         SECURE_MODE[0] = False
@@ -197,8 +202,10 @@ class TestSecureMode(BaseTestCase):
         data = json.loads(r.data)
         self.assertEqual(data["owner_id"], 2)
 
-    def test_mode_toggle_works(self):
-        """Mod değiştirme endpoint'i çalışmalı."""
+    def test_mode_toggle_requires_admin(self):
+        """Admin oturumuyla mod değiştirme endpoint'i çalışmalı."""
+        self.client.post("/logout")
+        self.login_as_admin()
         r = self.client.post("/admin/toggle-mode")
         self.assertEqual(r.status_code, 200)
         data = json.loads(r.data)
@@ -236,6 +243,92 @@ class TestSecurityUtils(unittest.TestCase):
 
 
 # ---------------------------------------------------------------
+# TEST 5: API GÜVENLİK SERTLEŞTİRMELERİ
+# ---------------------------------------------------------------
+
+class TestApiHardening(BaseTestCase):
+    """Kimlik doğrulama, yetkilendirme ve genel API sertleştirmeleri."""
+
+    def test_admin_toggle_blocked_for_regular_user(self):
+        """Düz kullanıcı mod değiştiremez (BFLA — API5)."""
+        self.login_as_ahmet()
+        r = self.client.post("/admin/toggle-mode")
+        self.assertEqual(r.status_code, 403)
+
+    def test_admin_toggle_blocked_when_anonymous(self):
+        """Oturum açmadan mod değiştirme reddedilmeli."""
+        r = self.client.post("/admin/toggle-mode")
+        self.assertEqual(r.status_code, 401)
+
+    def test_admin_reset_requires_admin(self):
+        """İstatistik sıfırlama yalnızca admin için."""
+        self.login_as_ahmet()
+        r = self.client.post("/admin/reset-stats")
+        self.assertEqual(r.status_code, 403)
+
+    def test_admin_can_reset_stats(self):
+        """Admin istatistikleri sıfırlayabilmeli."""
+        self.login_as_admin()
+        r = self.client.post("/admin/reset-stats")
+        self.assertEqual(r.status_code, 200)
+
+    def test_passwords_are_hashed(self):
+        """Parolalar düz metin değil, hash olarak saklanmalı."""
+        from app import USERS
+        for username, record in USERS.items():
+            self.assertNotIn("password", record,
+                             f"{username} düz metin parola tutuyor!")
+            self.assertIn("password_hash", record)
+            self.assertNotEqual(record["password_hash"], "")
+
+    def test_login_rate_limited(self):
+        """Çok sayıda başarısız giriş 429 ile sınırlanmalı (API4)."""
+        last_status = None
+        for _ in range(8):
+            last_status = self.login("ahmet", "yanlis").status_code
+        self.assertEqual(last_status, 429)
+
+    def test_security_headers_present(self):
+        """Yanıtlarda güvenlik başlıkları bulunmalı."""
+        r = self.client.get("/admin/mode")
+        self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(r.headers.get("X-Frame-Options"), "DENY")
+        self.assertIn("Content-Security-Policy", r.headers)
+
+    def test_unknown_route_returns_json_404(self):
+        """Bilinmeyen rota HTML değil JSON 404 döndürmeli."""
+        r = self.client.get("/api/does-not-exist")
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.content_type.split(";")[0], "application/json")
+
+    def test_login_does_not_leak_user_existence(self):
+        """Hatalı parola ve olmayan kullanıcı aynı mesajı dönmeli (enumeration)."""
+        r1 = self.login("ahmet", "yanlis")
+        login_limiter.reset()
+        r2 = self.login("olmayan_kullanici", "yanlis")
+        self.assertEqual(json.loads(r1.data)["error"], json.loads(r2.data)["error"])
+
+    def test_web_ui_served(self):
+        """Ana sayfa tarayıcı için HTML döndürmeli."""
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("text/html", r.content_type)
+        self.assertIn(b"IDOR", r.data)
+
+    def test_admin_token_allows_toggle_without_session(self):
+        """Geçerli X-Admin-Token, oturum olmadan mod değiştirebilmeli."""
+        from app import app as _app
+        token = _app.config["ADMIN_API_TOKEN"]
+        r = self.client.post("/admin/toggle-mode", headers={"X-Admin-Token": token})
+        self.assertEqual(r.status_code, 200)
+
+    def test_invalid_admin_token_rejected(self):
+        """Hatalı X-Admin-Token reddedilmeli."""
+        r = self.client.post("/admin/toggle-mode", headers={"X-Admin-Token": "yanlis"})
+        self.assertIn(r.status_code, (401, 403))
+
+
+# ---------------------------------------------------------------
 # ÇALIŞTIRMA
 # ---------------------------------------------------------------
 
@@ -245,7 +338,8 @@ if __name__ == "__main__":
     print("=" * 60)
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    for cls in [TestAuthentication, TestVulnerableMode, TestSecureMode, TestSecurityUtils]:
+    for cls in [TestAuthentication, TestVulnerableMode, TestSecureMode,
+                TestSecurityUtils, TestApiHardening]:
         suite.addTests(loader.loadTestsFromTestCase(cls))
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)

@@ -1,0 +1,33 @@
+# Sanal ortamlar
+.venv/
+venv/
+env/
+ENV/
+
+# Sanal ortam betikleri ve ikilileri (yanlışlıkla commit edilmemeli)
+Activate.ps1
+activate
+activate.bat
+deactivate.bat
+pyvenv.cfg
+*.exe
+
+# Python bytecode / önbellek
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test / araç önbellekleri
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ortam değişkenleri / sırlar
+.env
+*.env
+
+# Editör / işletim sistemi
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
