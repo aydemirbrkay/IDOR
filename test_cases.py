@@ -308,6 +308,25 @@ class TestApiHardening(BaseTestCase):
         r2 = self.login("olmayan_kullanici", "yanlis")
         self.assertEqual(json.loads(r1.data)["error"], json.loads(r2.data)["error"])
 
+    def test_web_ui_served(self):
+        """Ana sayfa tarayıcı için HTML döndürmeli."""
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("text/html", r.content_type)
+        self.assertIn(b"IDOR", r.data)
+
+    def test_admin_token_allows_toggle_without_session(self):
+        """Geçerli X-Admin-Token, oturum olmadan mod değiştirebilmeli."""
+        from app import app as _app
+        token = _app.config["ADMIN_API_TOKEN"]
+        r = self.client.post("/admin/toggle-mode", headers={"X-Admin-Token": token})
+        self.assertEqual(r.status_code, 200)
+
+    def test_invalid_admin_token_rejected(self):
+        """Hatalı X-Admin-Token reddedilmeli."""
+        r = self.client.post("/admin/toggle-mode", headers={"X-Admin-Token": "yanlis"})
+        self.assertIn(r.status_code, (401, 403))
+
 
 # ---------------------------------------------------------------
 # ÇALIŞTIRMA

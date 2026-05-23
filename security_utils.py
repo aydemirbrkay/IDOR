@@ -8,11 +8,12 @@ Kullanım:
     from security_utils import login_required, owner_required, check_object_ownership
 """
 
+import hmac
 import logging
 import time
 from collections import defaultdict
 from functools import wraps
-from flask import session, request, jsonify
+from flask import session, request, jsonify, current_app
 
 # ---------------------------------------------------------------
 # GÜVENLİK LOGGER'I
@@ -78,9 +79,24 @@ def login_required(f):
 # OWASP API5:2023 — Broken Function Level Authorization
 # ---------------------------------------------------------------
 
+def _valid_admin_token() -> bool:
+    """
+    İstekte geçerli bir yönetici anahtarı (X-Admin-Token) var mı kontrol eder.
+
+    Bu, oturum tabanlı admin rolüne ek bir yetkilendirme kanalıdır. Web demo
+    panelinin, saldırgan oturumunu (çerez) bozmadan mod değiştirmesini sağlar.
+    Gerçek dünyada böyle bir servis/otomasyon anahtarı GİZLİ tutulmalı ve
+    istemci koduna gömülmemelidir.
+    """
+    expected = current_app.config.get("ADMIN_API_TOKEN")
+    provided = request.headers.get("X-Admin-Token", "")
+    return bool(expected) and hmac.compare_digest(str(provided), str(expected))
+
+
 def admin_required(f):
     """
-    Yalnızca 'admin' rolündeki kullanıcıların endpoint'e erişmesine izin verir.
+    Yalnızca 'admin' rolündeki kullanıcıların (veya geçerli yönetici anahtarı
+    sunan isteklerin) endpoint'e erişmesine izin verir.
 
     Yönetimsel işlemler (mod değiştirme, istatistik sıfırlama) düz kullanıcılara
     açık olmamalıdır. Bu kontrolün eksikliği, BFLA (API5) zafiyetini oluşturur:
@@ -88,6 +104,10 @@ def admin_required(f):
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Kanal 1: Geçerli yönetici anahtarı (servis/otomasyon erişimi)
+        if _valid_admin_token():
+            return f(*args, **kwargs)
+        # Kanal 2: Oturumda admin rolü
         if "user_id" not in session:
             return jsonify({"hata": "Bu işlem için giriş yapmalısınız.", "kod": 401}), 401
         if session.get("role") != "admin":
