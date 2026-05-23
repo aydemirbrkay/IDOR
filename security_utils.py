@@ -9,6 +9,8 @@ Kullanım:
 """
 
 import logging
+import time
+from collections import defaultdict
 from functools import wraps
 from flask import session, request, jsonify
 
@@ -67,6 +69,33 @@ def login_required(f):
                 f"Yetkisiz istek (oturum yok) | Endpoint: {request.path} | IP: {request.remote_addr}"
             )
             return jsonify({"hata": "Bu işlem için giriş yapmalısınız.", "kod": 401}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ---------------------------------------------------------------
+# DEKORATÖR 1b: Function-Level Authorization (Rol Kontrolü)
+# OWASP API5:2023 — Broken Function Level Authorization
+# ---------------------------------------------------------------
+
+def admin_required(f):
+    """
+    Yalnızca 'admin' rolündeki kullanıcıların endpoint'e erişmesine izin verir.
+
+    Yönetimsel işlemler (mod değiştirme, istatistik sıfırlama) düz kullanıcılara
+    açık olmamalıdır. Bu kontrolün eksikliği, BFLA (API5) zafiyetini oluşturur:
+    sıradan bir kullanıcı yönetimsel fonksiyonları tetikleyebilir.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return jsonify({"hata": "Bu işlem için giriş yapmalısınız.", "kod": 401}), 401
+        if session.get("role") != "admin":
+            security_logger.warning(
+                f"Yetkisiz yönetim isteği | Kullanıcı: {session.get('user_id')} "
+                f"| Endpoint: {request.path} | IP: {request.remote_addr}"
+            )
+            return jsonify({"hata": "Bu işlem için yönetici yetkisi gerekir.", "kod": 403}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -141,3 +170,42 @@ def log_unauthorized_access(user_id: int, resource_type: str,
         f"Kaynak: {resource_type}#{resource_id} | "
         f"IP: {ip}"
     )
+
+
+# ---------------------------------------------------------------
+# RATE LIMITER: Kaba Kuvvet / Aşırı İstek Koruması
+# OWASP API4:2023 — Unrestricted Resource Consumption
+# ---------------------------------------------------------------
+
+class RateLimiter:
+    """
+    Basit, bellek içi kayan pencere (sliding window) rate limiter.
+
+    Belirli bir anahtar (örn. IP adresi) için verilen pencere süresinde
+    izin verilen istek sayısını sınırlar. Brute-force parola denemelerini
+    ve otomatik taramayı yavaşlatmak için kullanılır.
+
+    Not: Tek süreçli demo için bellek içi yeterlidir. Üretimde dağıtık
+    bir depo (Redis vb.) ile uygulanmalıdır.
+    """
+
+    def __init__(self, max_requests: int, window_seconds: int):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._hits = defaultdict(list)
+
+    def is_allowed(self, key: str) -> bool:
+        now = time.time()
+        window_start = now - self.window_seconds
+        recent = [t for t in self._hits[key] if t > window_start]
+        self._hits[key] = recent
+        if len(recent) >= self.max_requests:
+            return False
+        recent.append(now)
+        return True
+
+    def reset(self, key: str = None) -> None:
+        if key is None:
+            self._hits.clear()
+        else:
+            self._hits.pop(key, None)

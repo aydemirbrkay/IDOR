@@ -99,16 +99,16 @@ python test_cases.py      # Unit testler
 
 ## API Endpoint'leri
 
-| Metot | Endpoint | Açıklama |
-|---|---|---|
-| `POST` | `/login` | Giriş yapar, oturum açar |
-| `POST` | `/logout` | Oturumu kapatır |
-| `GET`  | `/api/invoice/<id>` | Fatura görüntüler — **IDOR noktası** |
-| `GET`  | `/api/my-invoices` | Kullanıcının kendi faturalarını listeler |
-| `POST` | `/admin/toggle-mode` | Zafiyetli/güvenli mod arasında geçiş yapar |
-| `GET`  | `/admin/mode` | Mevcut modu döndürür |
-| `GET`  | `/admin/stats` | İstek istatistiklerini döndürür |
-| `POST` | `/admin/reset-stats` | İstatistikleri sıfırlar |
+| Metot | Endpoint | Erişim | Açıklama |
+|---|---|---|---|
+| `POST` | `/login` | Herkes | Giriş yapar, oturum açar (rate-limit'li) |
+| `POST` | `/logout` | Herkes | Oturumu kapatır |
+| `GET`  | `/api/invoice/<id>` | Giriş gerekli | Fatura görüntüler — **IDOR noktası** |
+| `GET`  | `/api/my-invoices` | Giriş gerekli | Kullanıcının kendi faturalarını listeler |
+| `POST` | `/admin/toggle-mode` | **Admin** | Zafiyetli/güvenli mod arasında geçiş yapar |
+| `GET`  | `/admin/mode` | Herkes | Mevcut modu döndürür (yalnızca okuma) |
+| `GET`  | `/admin/stats` | Herkes | İstek istatistiklerini döndürür |
+| `POST` | `/admin/reset-stats` | **Admin** | İstatistikleri sıfırlar |
 
 ---
 
@@ -119,6 +119,35 @@ python test_cases.py      # Unit testler
 | `ahmet` | `ahmet123` | #1001, #1002 |
 | `mehmet` | `mehmet123` | #2001, #2002 |
 | `admin` | `admin123` | — |
+
+---
+
+## Güvenlik Sertleştirmeleri
+
+IDOR demosunun çift modlu yapısı korunurken, projedeki API güvenliği eksiklikleri
+gerçek dünya en iyi pratiklerine göre kapatılmıştır:
+
+| Alan | OWASP API Top 10 | Uygulanan Önlem |
+|---|---|---|
+| Parola saklama | API2 — Broken Authentication | Parolalar `werkzeug` ile hash'lenir; sabit-zamanlı doğrulama |
+| Secret key | API2 | Ortam değişkeninden okunur, yoksa güvenli rastgele üretilir |
+| Oturum çerezi | API2 | `HttpOnly`, `SameSite=Lax`, üretimde `Secure` |
+| Yönetim fonksiyonları | API5 — Broken Function Level Authorization | `/admin` durum değiştiren uçlar `admin_required` ile korunur |
+| Kaba kuvvet | API4 — Unrestricted Resource Consumption | `/login` IP başına rate-limit (60 sn'de 5 deneme → 429) |
+| Bilgi sızıntısı | API3 / genel | Kullanıcı enumeration'ı önleyen genel hata mesajları; JSON hata yanıtları |
+| Tarayıcı saldırıları | Genel | Güvenlik başlıkları (`X-Content-Type-Options`, `X-Frame-Options`, CSP, vb.) |
+
+> Not: `/api/invoice/<id>` uç noktası, IDOR taramasını canlı gösterebilmek için
+> bilinçli olarak rate-limit dışı bırakılmıştır. Üretimde kaynak uçları da
+> sınırlandırılmalıdır (savunma derinliği).
+
+### Yapılandırma (Ortam Değişkenleri)
+
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `FLASK_SECRET_KEY` | rastgele | Oturum imzalama anahtarı (üretimde sabit bir değer verin) |
+| `FLASK_ENV` | — | `production` ise çerezler `Secure` (yalnızca HTTPS) olur |
+| `PORT` | `5000` | Sunucu portu |
 
 ---
 
