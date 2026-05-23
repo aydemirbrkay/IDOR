@@ -2,36 +2,24 @@
 
 Bu kılavuz, **IDOR Güvenlik Simülasyonu**'nun tarayıcı tabanlı web arayüzünü hiç
 deneyimi olmayan biri için adım adım anlatır. Projeyi GitHub'dan klonladıktan sonra
-bu dosyayı takip ederek demoyu kendiniz çalıştırabilirsiniz.
+bu dosyayı takip ederek demoyu kullanabilirsiniz.
 
-> Teknik kurulum/komut ayrıntıları için ana [`README.md`](README.md) dosyasına da bakabilirsiniz.
+> **Önce kurmanız gerekiyor.** Kurulum ve çalıştırma (klonla → sunucuyu başlat →
+> tarayıcıda aç) adımları için [**KURULUM_VE_CALISTIRMA.md**](KURULUM_VE_CALISTIRMA.md)
+> dosyasına bakın. Bu kılavuz, arayüz **açıldıktan sonra** nasıl kullanılacağını anlatır.
 
 ---
 
-## 1. Hızlı Başlangıç (3 adım)
+## 1. Arayüzü Açma
+
+Kurulumu yaptıysanız (bkz. [KURULUM_VE_CALISTIRMA.md](KURULUM_VE_CALISTIRMA.md)),
+sunucuyu başlatın ve tarayıcıda paneli açın:
 
 ```bash
-# 1) Projeyi indirin
-git clone https://github.com/aydemirbrkay/IDOR.git
-cd IDOR
-
-# 2) Ortamı kurun
-python -m venv .venv
-source .venv/bin/activate     # Linux / macOS
-.venv\Scripts\activate        # Windows
-pip install -r requirements.txt
-
-# 3) Sunucuyu başlatın
 python app.py
 ```
 
-Terminalde şu satırı görünce hazırsınız:
-
-```
-[IDOR Sunucu] http://localhost:5000 — Mod: ZAFİYETLİ
-```
-
-Şimdi **tarayıcınızı** açıp şu adrese gidin:
+Sonra tarayıcınızda şu adrese gidin:
 
 ```
 http://localhost:5000
