@@ -8,6 +8,9 @@ Bu dosya iki şey içindir:
 
 > Teorinin tamamı (analoji, gerçek dünya vakaları, OWASP referansları) için ayrıca
 > [IDOR_Egitim.md](IDOR_Egitim.md) dosyasına bakın.
+>
+> **Dakika dakika, slayt slayt 10 dakikalık sunum planı** için:
+> [SUNUM_PLANI.md](SUNUM_PLANI.md).
 
 ---
 
