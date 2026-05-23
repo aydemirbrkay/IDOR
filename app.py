@@ -12,7 +12,7 @@ Bu tasarım, sunum sırasında canlı karşılaştırma yapmayı sağlar.
 import os
 import secrets
 
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, session, jsonify, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from security_utils import (
@@ -44,6 +44,11 @@ app.config.update(
 
 # Brute-force koruması: IP başına 60 saniyede en fazla 5 giriş denemesi
 login_limiter = RateLimiter(max_requests=5, window_seconds=60)
+
+# Yönetici anahtarı: web demo paneli, saldırgan oturumunu bozmadan mod
+# değiştirebilmek için bu anahtarı X-Admin-Token başlığıyla gönderir.
+# Üretimde gizli ve güçlü bir değer kullanın (ortam değişkeninden).
+app.config["ADMIN_API_TOKEN"] = os.environ.get("ADMIN_API_TOKEN", "idor-demo-admin-token")
 
 # ---------------------------------------------------------------
 # MOD KONTROLÜ
@@ -93,6 +98,17 @@ INVOICES = {
            "amount": "₺3.200,00", "service": "Sunucu Bakımı",
            "date": "2024-03-05", "status": "Bekliyor"},
 }
+
+
+# ---------------------------------------------------------------
+# ENDPOINT: WEB ARAYÜZÜ (tarayıcı tabanlı interaktif demo)
+# GET /
+# ---------------------------------------------------------------
+
+@app.route("/", methods=["GET"])
+def index():
+    """Tarayıcıda çalışan interaktif IDOR demo panelini sunar."""
+    return render_template("index.html")
 
 
 # ---------------------------------------------------------------
@@ -270,7 +286,15 @@ def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Content-Security-Policy"] = "default-src 'none'"
+    # Yalnızca aynı köken kaynaklarına izin ver; dış kaynak yüklenemez.
+    # (Inline stil/script web paneli için gereklidir.)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "connect-src 'self'; "
+        "img-src 'self' data:"
+    )
     response.headers["Cache-Control"] = "no-store"
     return response
 
