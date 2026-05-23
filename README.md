@@ -16,7 +16,8 @@ Bu repodaki belgeler, başlığına bakarak ne için olduğunu anlayacağınız 
 |---|---|
 | **Kurmak ve çalıştırmak** (klonla → localhost'ta web'de aç) | 👉 [**KURULUM_VE_CALISTIRMA.md**](KURULUM_VE_CALISTIRMA.md) |
 | **Uygulamayı kullanmak** (web panelini adım adım nasıl kullanırım) | 👉 [**KULLANIM_KILAVUZU.md**](KULLANIM_KILAVUZU.md) |
-| **Sunum yapmak / projeyi anlatmak** (anlatım metni + sunum senaryosu) | 👉 [**SUNUM_VE_PROJE_ANLATIMI.md**](SUNUM_VE_PROJE_ANLATIMI.md) |
+| **10 dakikalık sunum yapmak** (dakika dakika slayt + konuşma planı) | 👉 [**SUNUM_PLANI.md**](SUNUM_PLANI.md) |
+| **Projeyi anlatmak** (anlatım metni + sunum senaryosu) | 👉 [**SUNUM_VE_PROJE_ANLATIMI.md**](SUNUM_VE_PROJE_ANLATIMI.md) |
 | **Konuyu derinlemesine öğrenmek** (teori, analoji, gerçek vakalar) | 👉 [**IDOR_Egitim.md**](IDOR_Egitim.md) |
 | **Genel bakış + teknik özet** | Bu dosya (README) |
 
@@ -81,6 +82,7 @@ IDOR/
 ├── README.md                   Genel bakış + belge indeksi (bu dosya)
 ├── KURULUM_VE_CALISTIRMA.md    Kurulum + localhost'ta çalıştırma adımları
 ├── KULLANIM_KILAVUZU.md        Web arayüzü kullanım kılavuzu
+├── SUNUM_PLANI.md              10 dakikalık dakika dakika sunum planı
 ├── SUNUM_VE_PROJE_ANLATIMI.md  Sunum rehberi + projeyi anlatan metin
 ├── IDOR_Egitim.md              Kapsamlı eğitim rehberi (teori + analiz)
 │
