@@ -102,6 +102,9 @@ class IDORSimApp(tk.Tk):
         self.resizable(True, True)
 
         self.session = requests.Session()
+        # Yönetimsel işlemler (mod/istatistik) için ayrı admin oturumu.
+        # Saldırgan oturumu (self.session) düz kullanıcı olarak kalır.
+        self.admin_session = requests.Session()
         self.logged_in = False
         self.current_user = None
 
@@ -189,6 +192,14 @@ class IDORSimApp(tk.Tk):
         def check():
             ok = wait_for_server()
             if ok:
+                # Yönetim oturumunu admin olarak aç (toggle/reset için gerekli)
+                try:
+                    self.admin_session.post(
+                        f"{BASE_URL}/login",
+                        json={"username": "admin", "password": "admin123"},
+                    )
+                except Exception:
+                    pass
                 self.server_status_lbl.config(text="● Sunucu hazır", fg=C["green"])
                 self.status_lbl.config(text="Flask sunucu http://127.0.0.1:5000 adresinde çalışıyor.")
                 self.attacker_panel.on_server_ready()
@@ -204,7 +215,7 @@ class IDORSimApp(tk.Tk):
 
     def _toggle_mode(self):
         try:
-            r = self.session.post(f"{BASE_URL}/admin/toggle-mode")
+            r = self.admin_session.post(f"{BASE_URL}/admin/toggle-mode")
             data = r.json()
             secure = data["secure"]
             if secure:
@@ -267,6 +278,7 @@ class AttackerPanel(tk.Frame):
         super().__init__(parent, bg=C["panel"], bd=0)
         self.app = app
         self.session = app.session
+        self.logged_in_user_id = None
         self._build()
 
     def _build(self):
@@ -437,6 +449,7 @@ class AttackerPanel(tk.Frame):
                                   json={"username": u, "password": p})
             data = r.json()
             if r.status_code == 200:
+                self.logged_in_user_id = data.get("user_id")
                 self.login_status.config(
                     text=f"⬤ {data.get('message', 'Giriş başarılı')}",
                     fg=C["green"],
@@ -457,6 +470,7 @@ class AttackerPanel(tk.Frame):
     def _logout(self):
         try:
             self.session.post(f"{BASE_URL}/logout")
+            self.logged_in_user_id = None
             self.login_status.config(text="⬤ Oturum kapalı", fg=C["dim"])
             self.login_btn.config(state=tk.NORMAL)
             self.logout_btn.config(state=tk.DISABLED)
@@ -474,12 +488,9 @@ class AttackerPanel(tk.Frame):
             is_secure = SECURE_MODE[0]
 
             if r.status_code == 200:
-                owner_id = data.get("owner_id")
-                user_id = self.session.get(f"{BASE_URL}/admin/mode")  # trick: get current user
-                # Kimin faturası?
-                is_own = (data.get("owner") == self.user_var.get().capitalize() or
-                          "Ahmet" in data.get("owner", "") and self.user_var.get() == "ahmet" or
-                          "Mehmet" in data.get("owner", "") and self.user_var.get() == "mehmet")
+                # Sahiplik, oturumdaki kullanıcının id'si ile faturanın owner_id'si
+                # karşılaştırılarak belirlenir (isim eşleştirmesi değil).
+                is_own = data.get("owner_id") == self.logged_in_user_id
 
                 self.resp_status.config(text="HTTP 200 OK", fg=C["green"])
                 append_log(self.resp_box,
@@ -685,7 +696,7 @@ class ServerPanel(tk.Frame):
 
     def _reset_stats(self):
         try:
-            self.app.session.post(f"{BASE_URL}/admin/reset-stats")
+            self.app.admin_session.post(f"{BASE_URL}/admin/reset-stats")
             self.log("İstatistikler sıfırlandı.", "dim")
         except Exception:
             pass
