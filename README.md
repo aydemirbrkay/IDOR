@@ -59,7 +59,9 @@ IDOR/
 
 Ayrıntılı teori, otel odası analojisi, gerçek dünya vakaları ve kod analizi için
 [**IDOR_Egitim.md**](IDOR_Egitim.md) dosyasına bakın. Web arayüzünü adım adım nasıl
-kullanacağınızı öğrenmek için [**KULLANIM_KILAVUZU.md**](KULLANIM_KILAVUZU.md) dosyasına bakın.
+kullanacağınızı öğrenmek için [**KULLANIM_KILAVUZU.md**](KULLANIM_KILAVUZU.md),
+sunucuyu çalıştırıp localhost'a bağlanma adımları için
+[**LOCALHOST_BAGLANTI.md**](LOCALHOST_BAGLANTI.md) dosyasına bakın.
 
 ---
 
